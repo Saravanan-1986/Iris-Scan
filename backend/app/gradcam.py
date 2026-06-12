@@ -2,16 +2,20 @@
 
 import numpy as np
 import cv2
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 import base64
 from io import BytesIO
-from PIL import Image
 import torch
+from PIL import Image
+
+if TYPE_CHECKING:
+    from torch import Tensor
+    from torch.nn import Module
 
 
 def generate_gradcam_heatmap(
-    model: torch.nn.Module,
-    input_tensor: torch.Tensor,
+    model: Optional["Module"],
+    input_tensor: Optional["Tensor"],
     target_class: int,
     target_layer_name: str = "conv_head",
 ) -> np.ndarray:

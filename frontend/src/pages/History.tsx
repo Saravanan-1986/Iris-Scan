@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -8,11 +8,43 @@ import Button from '@/components/UI/Button';
 import Badge from '@/components/UI/Badge';
 import Card from '@/components/UI/Card';
 
+/** Simple sparkline chart for score trends */
+function ScoreSparkline({ scores }: { scores: number[] }) {
+  if (scores.length === 0) return null;
+  const max = Math.max(...scores, 100);
+  const min = Math.min(...scores, 0);
+  const range = max - min || 1;
+  const width = 200;
+  const height = 50;
+  const points = scores.map((s, i) => {
+    const x = (i / (scores.length - 1)) * width;
+    const y = height - ((s - min) / range) * (height - 10) - 5;
+    return `${x},${y}`;
+  });
+
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="inline-block">
+      <polyline
+        points={points.join(' ')}
+        fill="none"
+        stroke="#10B981"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {points.map((p, i) => {
+        const [x, y] = p.split(',');
+        return <circle key={i} cx={x} cy={y} r="3" fill="#10B981" />;
+      })}
+    </svg>
+  );
+}
+
 export default function History() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { records, removeRecord, clearAll } = useHistory();
-  const { selectedIds, toggleSelect, clearSelection, isCompareMode } = useCompareMode();
+  const { selectedIds, toggleSelect, clearSelection, isCompareMode: compareMode } = useCompareMode();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -29,9 +61,14 @@ export default function History() {
   };
 
   const handleDownload = (record: ScanRecord) => {
-    // PDF generation placeholder
     alert('PDF download will be implemented with jsPDF');
   };
+
+  // Compute score trend data
+  const scoreTrend = useMemo(() => {
+    const withScores = records.filter(r => r.eyeHealthScore !== undefined);
+    return withScores.slice(0, 10).reverse().map(r => r.eyeHealthScore!);
+  }, [records]);
 
   if (records.length === 0) {
     return (
@@ -51,13 +88,49 @@ export default function History() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-lg font-medium text-text-primary dark:text-white">{t('history.title')}</h1>
         <div className="flex gap-2">
-          {isCompareMode && (
+          {compareMode && (
             <Button variant="secondary" size="sm" onClick={clearSelection}>{t('common.cancel')}</Button>
           )}
           <Button variant="danger" size="sm" onClick={() => setClearConfirm(true)}>{t('history.clear_all')}</Button>
         </div>
       </div>
 
+      {/* Score Trend Card */}
+      {scoreTrend.length >= 2 && (
+        <Card className="mb-6">
+          <h2 className="text-sm font-medium text-text-primary dark:text-white mb-2">{t('history.score_trend')}</h2>
+          <p className="text-xs text-neutral mb-3">{t('history.score_trend_desc')}</p>
+          <div className="flex items-center justify-center">
+            <ScoreSparkline scores={scoreTrend} />
+          </div>
+          <div className="flex justify-between text-xs text-neutral mt-1">
+            <span>Earlier</span>
+            <span>Latest</span>
+          </div>
+        </Card>
+      )}
+
+      {/* Comparison View */}
+      {compareMode && selectedIds.length === 2 && (
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {selectedIds.map((id) => {
+            const record = records.find(r => r.id === id);
+            if (!record) return null;
+            return (
+              <Card key={id} className="border-secondary/30">
+                <p className="text-xs text-neutral mb-1">{new Date(record.date).toLocaleDateString()}</p>
+                <p className="text-lg font-bold text-secondary">{record.eyeHealthScore ?? '—'}<span className="text-xs text-neutral">/100</span></p>
+                <p className="text-sm text-text-primary dark:text-white truncate">{record.topPrediction}</p>
+                {record.conditions?.slice(0, 2).map((c, i) => (
+                  <p key={i} className="text-xs text-neutral">{c.name} ({c.confidence}%)</p>
+                ))}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Scan Records */}
       <div className="space-y-3">
         {records.map((record, index) => (
           <motion.div
@@ -90,10 +163,19 @@ export default function History() {
                     {record.topPrediction}
                   </p>
                   <p className="text-xs text-neutral">
-                    {new Date(record.date).toLocaleDateString()} — {record.id}
+                    {new Date(record.date).toLocaleDateString()} — {record.id.slice(0, 12)}...
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  {/* Health score badge */}
+                  {record.eyeHealthScore !== undefined && (
+                    <span className={`text-xs font-bold ${
+                      record.eyeHealthScore >= 80 ? 'text-secondary' :
+                      record.eyeHealthScore >= 60 ? 'text-warning' : 'text-danger'
+                    }`}>
+                      {record.eyeHealthScore}
+                    </span>
+                  )}
                   {record.predictions[0] && (
                     <Badge severity={record.predictions[0].severity}>
                       {t(`results.severity.${record.predictions[0].severity}`)}
@@ -108,15 +190,34 @@ export default function History() {
               {expandedId === record.id && (
                 <div className="mt-4 pt-4 border-t border-subtle">
                   <div className="space-y-2 mb-4">
-                    {record.predictions.slice(0, 3).map((pred) => (
-                      <div key={pred.diseaseId} className="flex items-center justify-between text-sm">
-                        <span className="text-text-primary dark:text-white">{pred.disease}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge severity={pred.severity}>{t(`results.severity.${pred.severity}`)}</Badge>
-                          <span className="text-neutral">{pred.confidence}%</span>
+                    {/* New multi-condition display */}
+                    {record.conditions && record.conditions.length > 0 ? (
+                      record.conditions.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between text-sm">
+                          <span className="text-text-primary dark:text-white">{c.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                              c.risk === 'Low' ? 'bg-secondary/10 text-secondary' :
+                              c.risk === 'Medium' ? 'bg-warning/10 text-warning' :
+                              c.risk === 'High' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-600' :
+                              'bg-danger/10 text-danger'
+                            }`}>{c.risk}</span>
+                            <span className="text-neutral">{c.confidence}%</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      /* Fallback to legacy predictions */
+                      record.predictions.slice(0, 3).map((pred) => (
+                        <div key={pred.diseaseId} className="flex items-center justify-between text-sm">
+                          <span className="text-text-primary dark:text-white">{pred.disease}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge severity={pred.severity}>{t(`results.severity.${pred.severity}`)}</Badge>
+                            <span className="text-neutral">{pred.confidence}%</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(record); }}>

@@ -1,37 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useScanStore } from '@/store/useScanStore';
 import { useHistory } from '@/hooks/useHistory';
-import { ScanRecord } from '@/types';
+import { Condition, ScanRecord, NearbyHospital } from '@/types';
+import EyeHealthScore from '@/components/UI/EyeHealthScore';
+import ConditionCard from '@/components/UI/ConditionCard';
 import Button from '@/components/UI/Button';
-import Badge from '@/components/UI/Badge';
 import Card from '@/components/UI/Card';
-import ProgressBar from '@/components/UI/ProgressBar';
+
+/** Mock nearby hospitals for impact feature */
+const MOCK_HOSPITALS: NearbyHospital[] = [
+  { name: 'Aravind Eye Hospital', address: 'No 1, Anna Nagar, Chennai', distance: '2.3 km', phone: '+91 44 2822 8888', rating: 4.8, specialties: ['Ophthalmology', 'Retina', 'Glaucoma'] },
+  { name: 'Sankara Nethralaya', address: '18, College Road, Nungambakkam', distance: '4.1 km', phone: '+91 44 2827 1616', rating: 4.7, specialties: ['Cataract', 'Cornea', 'Vitreo-retina'] },
+  { name: 'Dr. Agarwal Eye Hospital', address: 'New No 7, Old No 51, Cathedral Road', distance: '3.5 km', phone: '+91 44 2811 3300', rating: 4.5, specialties: ['Lasik', 'Cataract', 'Glaucoma'] },
+];
 
 export default function Results() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { predictions, sectorAnalysis, diseaseInfo, capturedImage, heatmapImage, scleraRedness, symptoms, resetScan } = useScanStore();
+
+  const {
+    heatmapImage,
+    conditions,
+    eyeHealthScore,
+    qualityScore,
+    predictions,
+    diseaseInfo,
+    scleraRedness,
+    symptoms,
+    sectorAnalysis,
+    resetScan,
+    capturedImage: img,
+  } = useScanStore();
+
   const { addRecord } = useHistory();
   const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showHospitals, setShowHospitals] = useState(false);
   const [saved, setSaved] = useState(false);
-
-  const topPrediction = predictions[0];
+  const [expandedConditionId, setExpandedConditionId] = useState<string | null>(null);
 
   const handleSave = () => {
-    if (saved || !capturedImage) return;
+    if (saved || !img) return;
     const record: ScanRecord = {
       id: 'scan_' + Date.now(),
       date: new Date().toISOString(),
-      irisImageBase64: capturedImage,
+      irisImageBase64: img,
       heatmapBase64: heatmapImage || '',
       sectorAnalysis,
       symptoms: symptoms as any,
       predictions,
-      topPrediction: topPrediction?.disease || '',
+      topPrediction: conditions[0]?.name || predictions[0]?.disease || 'Unknown',
       language: 'en',
+      conditions,
+      eyeHealthScore,
+      qualityScore,
     };
     const ok = addRecord(record);
     if (ok) setSaved(true);
@@ -42,19 +66,57 @@ export default function Results() {
     navigate('/capture');
   };
 
-  if (!topPrediction) {
+  const handleDownloadReport = () => {
+    try {
+      const { jsPDF } = window as any;
+      if (jsPDF) {
+        const doc = new jsPDF();
+        doc.setFontSize(18);
+        doc.text('EyeSight Screening Report', 20, 30);
+        doc.setFontSize(11);
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 45);
+        doc.text(`Eye Health Score: ${eyeHealthScore}/100`, 20, 55);
+        doc.text('---', 20, 65);
+        conditions.forEach((c, i) => {
+          doc.text(`${i + 1}. ${c.name} — ${c.confidence}% (${c.risk})`, 20, 75 + i * 10);
+        });
+        doc.text('---', 20, 75 + conditions.length * 10 + 5);
+        doc.text('This is a screening tool only. NOT a medical diagnosis.', 20, 85 + conditions.length * 10 + 5);
+        doc.save('EyeSight_Screening_Report.pdf');
+      } else {
+        alert('PDF generation will be available after importing jsPDF');
+      }
+    } catch {
+      alert('PDF generation error. Please save and try again.');
+    }
+  };
+
+  const getRecommendations = useMemo(() => {
+    const riskLevels = conditions.map(c => c.risk);
+    if (riskLevels.includes('Critical')) return { title: 'Immediate attention needed', items: ['Seek immediate medical attention', 'Visit the nearest hospital emergency room', 'Bring this screening report with you'] };
+    if (riskLevels.includes('High')) return { title: 'Schedule a visit soon', items: ['Consult an ophthalmologist within the week', 'Avoid self-medication', 'Rest your eyes and monitor symptoms'] };
+    if (riskLevels.includes('Medium')) return { title: 'Monitor and follow up', items: ['Schedule an eye exam within the month', 'Note any changes in symptoms', 'Maintain good eye care habits'] };
+    return { title: 'Keep up the good work!', items: ['Continue regular eye check-ups', 'Maintain healthy diet for eyes', 'Protect eyes from UV light'] };
+  }, [conditions]);
+
+  // Guard: no conditions
+  if (conditions.length === 0 && predictions.length === 0) {
     return (
       <div className="max-w-lg mx-auto px-4 py-20 text-center">
-        <p className="text-neutral">{t('errors.generic')}</p>
-        <Button className="mt-4" onClick={() => navigate('/capture')}>{t('errors.retry')}</Button>
+        <p className="text-neutral mb-4">{t('errors.generic')}</p>
+        <Button onClick={() => navigate('/capture')}>{t('errors.retry')}</Button>
       </div>
     );
   }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-medium text-text-primary dark:text-white">{t('results.title')}</h1>
+        <div>
+          <h1 className="text-xl font-medium text-text-primary dark:text-white">Screening Results</h1>
+          <p className="text-sm text-neutral mt-0.5">AI-powered eye health screening — {new Date().toLocaleDateString()}</p>
+        </div>
         <div className="flex gap-2">
           {!saved && <Button variant="secondary" size="sm" onClick={handleSave}>Save</Button>}
           <Button size="sm" onClick={handleNewScan}>{t('results.new_scan')}</Button>
@@ -62,120 +124,197 @@ export default function Results() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <Card raised>
-          <h2 className="text-base font-medium text-text-primary dark:text-white mb-4">{t('results.iris_analysis')}</h2>
-          {capturedImage && (
-            <div className="relative">
-              <img src={capturedImage} alt="Iris scan" className="w-full rounded-card" />
+        {/* Left: Image + Health Score */}
+        <div className="space-y-6">
+          {/* Eye Health Score - Animated Circular */}
+          <Card className="!p-0 overflow-hidden">
+            <div className="bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 p-6 flex flex-col items-center">
+              <div className="relative">
+                <EyeHealthScore score={eyeHealthScore} size={160} />
+              </div>
+              <p className="text-xs text-neutral mt-4">
+                Quality score: {Math.round(qualityScore * 100)}% · {conditions.length} condition{conditions.length > 1 ? 's' : ''} detected
+              </p>
+            </div>
+          </Card>
+
+          {/* Iris Image with heatmap toggle */}
+          <Card>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-medium text-text-primary dark:text-white">Eye Scan</h2>
+              <button
+                onClick={() => setShowHeatmap(!showHeatmap)}
+                className="text-xs text-primary hover:text-primary-600 transition-colors"
+              >
+                {showHeatmap ? 'Hide heatmap' : 'Show heatmap'}
+              </button>
+            </div>
+            <div className="relative rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+              {img && (
+                <img src={img} alt="Eye scan" className="w-full aspect-square object-cover" />
+              )}
               {showHeatmap && heatmapImage && (
-                <img src={heatmapImage} alt="Heatmap overlay" className="absolute inset-0 w-full h-full object-cover rounded-card opacity-60" />
+                <motion.img
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.6 }}
+                  src={heatmapImage}
+                  alt="AI heatmap overlay"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
               )}
             </div>
-          )}
-          <button
-            onClick={() => setShowHeatmap(!showHeatmap)}
-            className="mt-3 text-sm text-primary hover:text-primary-600 transition-colors"
-            aria-label={showHeatmap ? t('results.hide_heatmap') : t('results.show_heatmap')}
-          >
-            {showHeatmap ? t('results.hide_heatmap') : t('results.show_heatmap')}
-          </button>
-          <div className="mt-4 grid grid-cols-4 gap-2">
-            {sectorAnalysis.map((sector) => (
-              <div
-                key={sector.label}
-                className={`text-center p-2 rounded-input border text-xs ${
-                  sector.severity
-                    ? 'border-warning bg-warning-50 dark:bg-warning-900/20'
-                    : 'border-neutral-200 dark:border-neutral-700'
-                }`}
-                title={sector.anomalies.join(', ')}
-              >
-                <span className="font-medium text-text-primary dark:text-white">{sector.label}</span>
-                {sector.anomalies.length > 0 && <span className="block text-warning mt-0.5">⚠</span>}
-              </div>
-            ))}
-          </div>
-        </Card>
+            {showHeatmap && (
+              <p className="text-xs text-neutral mt-2 italic">
+                Highlighted regions indicate areas the AI focused on during analysis.
+              </p>
+            )}
+          </Card>
+        </div>
 
+        {/* Right: Conditions + Info */}
         <div className="space-y-4">
-          <h2 className="text-base font-medium text-text-primary dark:text-white">{t('results.predictions')}</h2>
-          {predictions.map((pred, i) => (
-            <motion.div
-              key={pred.diseaseId}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <Card raised className="relative">
-                {i === 0 && (
-                  <Badge variant="primary" className="absolute -top-2 -right-2">{t('results.most_likely')}</Badge>
-                )}
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-base font-medium text-text-primary dark:text-white">{pred.disease}</h3>
-                  <Badge severity={pred.severity}>{t(`results.severity.${pred.severity}`)}</Badge>
-                </div>
-                <p className="text-sm text-neutral mb-3">{pred.description}</p>
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-sm text-text-primary dark:text-white font-medium">{t('results.confidence', { percent: pred.confidence })}</span>
-                </div>
-                <ProgressBar value={pred.confidence} variant={pred.severity === 'low' ? 'secondary' : pred.severity === 'moderate' ? 'warning' : 'danger'} />
-                {pred.affectedSectors.length > 0 && (
-                  <p className="text-xs text-neutral mt-2">
-                    {t('results.affected_sectors', { sectors: pred.affectedSectors.join(', ') })}
-                  </p>
-                )}
-              </Card>
-            </motion.div>
+          <h2 className="text-base font-medium text-text-primary dark:text-white">
+            Detected Conditions
+          </h2>
+
+          {/* Condition Cards */}
+          {conditions.map((condition: Condition, i: number) => (
+            <ConditionCard
+              key={`${condition.name}-${i}`}
+              condition={condition}
+              index={i}
+              isExpanded={expandedConditionId === `${condition.name}-${i}`}
+              onToggle={() =>
+                setExpandedConditionId(
+                  expandedConditionId === `${condition.name}-${i}` ? null : `${condition.name}-${i}`
+                )
+              }
+            />
+          ))}
+
+          {/* Legacy predictions fallback if new conditions empty */}
+          {conditions.length === 0 && predictions.map((pred, i) => (
+            <Card key={pred.diseaseId} className="border border-subtle">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium text-text-primary dark:text-white">{pred.disease}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral">
+                  {pred.confidence}%
+                </span>
+              </div>
+              <p className="text-xs text-neutral">{pred.description}</p>
+            </Card>
           ))}
         </div>
       </div>
 
-      {diseaseInfo && (
-        <Card raised>
-          <h2 className="text-base font-medium text-text-primary dark:text-white mb-4">{t('results.disease_info')}</h2>
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium text-text-primary dark:text-white mb-1">{t('results.what_is_it')}</h3>
-              <p className="text-sm text-neutral">{diseaseInfo.description}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-text-primary dark:text-white mb-1">{t('results.common_causes')}</h3>
-              <ul className="list-disc list-inside text-sm text-neutral space-y-0.5">
-                {diseaseInfo.causes.map((cause, i) => (
-                  <li key={i}>{cause}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-text-primary dark:text-white mb-1">{t('results.symptoms')}</h3>
-              <ul className="list-disc list-inside text-sm text-neutral space-y-0.5">
-                {diseaseInfo.commonSymptoms.map((sym, i) => (
-                  <li key={i}>{sym}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-text-primary dark:text-white mb-1">{t('results.recommendations')}</h3>
-              <ul className="list-disc list-inside text-sm text-neutral space-y-0.5">
-                {diseaseInfo.recommendations.map((rec, i) => (
-                  <li key={i}>{rec}</li>
-                ))}
-              </ul>
-            </div>
+      {/* Recommendations Section */}
+      <Card>
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-full bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
+          <div>
+            <h3 className="text-base font-medium text-text-primary dark:text-white mb-2">{getRecommendations.title}</h3>
+            <ul className="space-y-1.5">
+              {getRecommendations.items.map((item, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-neutral">
+                  <span className="text-secondary mt-0.5">•</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </Card>
+
+      {/* Disease info from legacy support */}
+      {diseaseInfo && (
+        <Card>
+          <h2 className="text-base font-medium text-text-primary dark:text-white mb-3">{diseaseInfo.description}</h2>
+          {diseaseInfo.causes?.[0] !== 'N/A' && (
+            <div className="mb-3">
+              <p className="text-xs font-medium text-neutral uppercase tracking-wider mb-1">Common Causes</p>
+              <ul className="list-disc list-inside text-sm text-neutral space-y-0.5">
+                {diseaseInfo.causes.map((cause, i) => <li key={i}>{cause}</li>)}
+              </ul>
+            </div>
+          )}
+          {diseaseInfo.recommendations.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-neutral uppercase tracking-wider mb-1">Recommendations</p>
+              <ul className="list-disc list-inside text-sm text-neutral space-y-0.5">
+                {diseaseInfo.recommendations.map((rec, i) => <li key={i}>{rec}</li>)}
+              </ul>
+            </div>
+          )}
         </Card>
       )}
 
+      {/* Sclera warning */}
       {scleraRedness && (
-        <Card raised>
-          <h2 className="text-base font-medium text-text-primary dark:text-white mb-2">{t('results.sclera_analysis')}</h2>
-          <p className="text-sm text-warning">{t('results.sclera_finding')}</p>
+        <Card className="bg-warning-50 dark:bg-warning-900/10 border-warning/20">
+          <p className="text-sm text-warning font-medium">
+            ⚠ Scleral redness detected — may indicate conjunctivitis or uveitis. Please consult an eye doctor.
+          </p>
         </Card>
       )}
 
+      {/* Action buttons */}
+      <div className="flex flex-wrap gap-3">
+        <Button variant="secondary" onClick={handleDownloadReport}>
+          📄 Download PDF Report
+        </Button>
+        <Button variant="outline" onClick={() => setShowHospitals(!showHospitals)}>
+          🏥 {showHospitals ? 'Hide' : 'Find'} Nearby Eye Hospitals
+        </Button>
+      </div>
+
+      {/* Nearby hospitals section */}
+      {showHospitals && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-3"
+        >
+          <h3 className="text-sm font-medium text-text-primary dark:text-white">Nearby Eye Hospitals</h3>
+          {MOCK_HOSPITALS.map((hospital, i) => (
+            <Card key={i} className="border border-subtle">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-text-primary dark:text-white">{hospital.name}</p>
+                  <p className="text-xs text-neutral">{hospital.address}</p>
+                  <p className="text-xs text-neutral mt-0.5">{hospital.phone}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-medium text-secondary">{hospital.distance}</p>
+                  <p className="text-xs text-warning">★ {hospital.rating}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {hospital.specialties.map((s) => (
+                  <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-primary-50 dark:bg-primary-900/20 text-primary">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </motion.div>
+      )}
+
+      {/* Disclaimer */}
       <Card className="bg-warning-50 dark:bg-warning-900/10 border-warning/20">
-        <p className="text-sm text-warning font-medium">{t('results.disclaimer')}</p>
+        <p className="text-xs text-warning">
+          ⚠️ <strong>Medical Disclaimer:</strong> This is a screening tool only. It does NOT provide a medical diagnosis.
+          The results shown are for informational purposes and should not replace professional medical advice.
+          Always consult a qualified ophthalmologist for a complete eye examination.
+        </p>
       </Card>
     </div>
   );
 }
+
+// Export for react-router lazy loading
+export { Results };

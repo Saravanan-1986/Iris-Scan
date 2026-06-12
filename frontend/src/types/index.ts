@@ -32,6 +32,23 @@ export interface Prediction {
   affectedSectors: SectorLabel[];
 }
 
+/** New multi-condition condition item from API */
+export interface Condition {
+  name: string;
+  confidence: number;
+  risk: 'Low' | 'Medium' | 'High' | 'Critical';
+  description: string;
+  meaning: string;
+  what_to_do: string;
+}
+
+export interface AnalysisResult {
+  conditions: Condition[];
+  eye_health_score: number;
+  quality_score: number;
+  heatmap: string;
+}
+
 export interface DiseaseInfo {
   id: number;
   name: string;
@@ -52,15 +69,21 @@ export interface ScanRecord {
   predictions: Prediction[];
   topPrediction: string;
   language: 'en' | 'ta' | 'hi';
+  /** Added fields for enhanced history */
+  conditions?: Condition[];
+  eyeHealthScore?: number;
+  qualityScore?: number;
 }
 
 export type Language = 'en' | 'ta' | 'hi';
 
-export interface AnalysisResult {
-  predictions: Prediction[];
-  heatmap: string;
-  sectorAnalysis: SectorData[];
-  diseaseInfo: DiseaseInfo;
-}
-
 export type DiseaseClassId = number;
+
+export interface NearbyHospital {
+  name: string;
+  address: string;
+  distance: string;
+  phone: string;
+  rating: number;
+  specialties: string[];
+}

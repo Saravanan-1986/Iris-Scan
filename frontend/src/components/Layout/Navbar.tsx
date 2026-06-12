@@ -1,7 +1,8 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageToggle from './LanguageToggle';
+import { isAuthenticated, logout, getCurrentUser } from '@/utils/auth';
 
 export default function Navbar() {
   const { t } = useTranslation();
@@ -11,8 +12,29 @@ export default function Navbar() {
     { path: '/', label: t('nav.home') },
     { path: '/capture', label: t('nav.capture') },
     { path: '/history', label: t('nav.history') },
+    { path: '/health-worker', label: t('nav.health_worker') },
     { path: '/settings', label: t('nav.settings') },
   ];
+
+  const navigate = useNavigate();
+  const [auth, setAuth] = useState<{ email: string; username: string } | null>(() => getCurrentUser());
+
+  useEffect(() => {
+    function onChange() {
+      setAuth(getCurrentUser());
+    }
+    window.addEventListener('authChanged', onChange);
+    window.addEventListener('storage', onChange);
+    return () => {
+      window.removeEventListener('authChanged', onChange);
+      window.removeEventListener('storage', onChange);
+    };
+  }, []);
+
+  async function handleSignOut() {
+    await logout();
+    navigate('/login');
+  }
 
   return (
     <nav className="sticky top-0 z-50 bg-white/80 dark:bg-[#0F1117]/80 backdrop-blur-md border-b border-subtle" role="navigation" aria-label="Main navigation">
@@ -42,6 +64,21 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            {auth ? (
+              <div className="flex items-center gap-2">
+                <Link to="/profile" className="text-sm text-neutral dark:text-white no-underline hover:underline">{auth.username}</Link>
+                <button onClick={handleSignOut} className="px-3 py-1.5 text-sm rounded-input text-red-600 hover:underline">{t('nav.sign_out') || 'Sign out'}</button>
+              </div>
+            ) : (
+              <Link to="/login" className={`px-3 py-1.5 text-sm rounded-input transition-colors no-underline ${
+                location.pathname === '/login'
+                  ? 'bg-primary-50 text-primary dark:bg-primary-900/20 dark:text-primary-300'
+                  : 'text-neutral hover:text-text-primary dark:hover:text-white'
+              }`}>
+                {t('nav.login')}
+              </Link>
+            )}
           </div>
 
           <LanguageToggle />

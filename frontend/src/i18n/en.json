@@ -1,36 +1,37 @@
 {
   "app": {
-    "name": "IrisScan",
+    "name": "EyeSight AI",
     "tagline": "See Your Eye Health Clearly",
-    "subtitle": "AI-Powered Iris Disease Detection System"
+    "subtitle": "AI-Powered Multi-Condition Eye Screening Platform"
   },
   "nav": {
     "home": "Home",
-    "capture": "Scan Iris",
+    "capture": "Scan Eye",
     "history": "History",
-    "settings": "Settings"
+    "settings": "Settings",
+    "health_worker": "Health Worker"
+    ,"login": "Login"
   },
   "hero": {
     "title": "See Your Eye Health Clearly",
-    "description": "Advanced AI-powered iris analysis for early disease detection. Scan your iris, answer a few questions, and receive a detailed health report in minutes.",
-    "cta": "Start Scan",
-    "step1": "Capture Iris",
-    "step1desc": "Take a clear photo of your iris using your webcam",
+    "description": "Advanced AI-powered eye screening for early detection of major eye diseases. Capture your eye image, answer a few questions, and receive a detailed health report in minutes. Works on any device with a camera.",
+    "cta": "Start Screening",
+    "step1": "Capture Eye",
+    "step1desc": "Take a clear photo of your eye using your camera",
     "step2": "Answer Questions",
     "step2desc": "Tell us about any symptoms you're experiencing",
     "step3": "Get Report",
-    "step3desc": "Receive a detailed analysis and recommendations",
-    "stats": "{{diseases}} diseases detected · 97% model accuracy · 0 data uploaded"
+    "step3desc": "Receive multi-condition analysis and recommendations"
   },
   "disclaimer": {
-    "text": "⚠️ Medical Disclaimer: IrisScan is a screening tool only. It does NOT provide a medical diagnosis. Always consult a qualified ophthalmologist for professional evaluation.",
+    "text": "⚠️ Medical Disclaimer: EyeSight AI is a screening tool only. It does NOT provide a medical diagnosis. Always consult a qualified ophthalmologist for professional evaluation.",
     "dismiss": "I understand"
   },
   "capture": {
-    "title": "Iris Capture",
+    "title": "Eye Capture",
     "guidance_center": "Center your eye in the circle",
     "guidance_hold": "Hold still...",
-    "guidance_good": "Good!",
+    "guidance_good": "Perfect!",
     "guide_lighting": "Please improve lighting",
     "guide_no_eye": "Please centre your eye in the frame",
     "quality_lighting": "Lighting",
@@ -104,28 +105,42 @@
     "submit": "Analyse"
   },
   "analysing": {
-    "title": "Analysing Your Iris",
+    "title": "Analysing Your Eye",
     "steps": {
-      "segmenting": "Segmenting iris boundary...",
-      "extracting": "Extracting sector colour profiles...",
-      "pattern": "Analysing pattern variations...",
-      "symptoms": "Cross-referencing symptom data...",
-      "classifier": "Running multimodal classifier...",
+      "segmenting": "Detecting eye region...",
+      "extracting": "Extracting tissue patterns...",
+      "pattern": "Analysing iris texture...",
+      "symptoms": "Cross-referencing symptoms...",
+      "classifier": "Running multi-condition AI...",
       "heatmap": "Generating explainability map..."
     },
     "tips": [
       "Did you know? The iris has over 200 unique features — more than fingerprints!",
       "Regular eye check-ups can prevent 80% of vision impairment cases.",
       "Glaucoma is often called the 'silent thief of sight' as symptoms appear late.",
-      "Blue eyes contain less melanin, making them more sensitive to light."
+      "Blue eyes contain less melanin, making them more sensitive to light.",
+      "More than 2.2 billion people have vision impairment — most cases are preventable.",
+      "A diet rich in Vitamin A, C, and E can help maintain healthy eyes."
     ]
   },
   "results": {
-    "title": "Diagnosis Results",
-    "iris_analysis": "Iris Analysis",
+    "title": "Screening Results",
+    "eye_health_score": "Eye Health Score",
+    "quality": "Quality Score",
+    "detected_conditions": "Detected Conditions",
+    "what_this_means": "What this means",
+    "what_to_do": "What you should do",
+    "recommendation_title": "Recommendations",
     "show_heatmap": "Show Heatmap",
     "hide_heatmap": "Hide Heatmap",
-    "predictions": "Prediction Results",
+    "download_report": "Download PDF Report",
+    "find_hospitals": "Find Nearby Eye Hospitals",
+    "new_scan": "New Scan",
+    "save": "Save",
+    "saved": "Saved",
+    "disclaimer": "This is a screening tool only. It is NOT a medical diagnosis. Please consult a qualified ophthalmologist for professional evaluation.",
+    "iris_analysis": "Eye Analysis",
+    "predictions": "Predictions",
     "most_likely": "Most Likely",
     "confidence": "{{percent}}% Confidence",
     "severity": {
@@ -135,37 +150,35 @@
       "critical": "Critical"
     },
     "affected_sectors": "Affected sectors: {{sectors}}",
-    "sector_detail": "Sector {{index}} ({{label}}): {{description}}",
-    "disease_info": "Disease Information",
+    "disease_info": "Condition Information",
     "what_is_it": "What is it?",
     "common_causes": "Common Causes",
     "symptoms": "Symptoms",
     "when_to_see_doctor": "When to See a Doctor",
-    "recommendations": "Lifestyle Recommendations",
     "symptom_crossref": "Symptom Cross-Reference",
     "sclera_analysis": "Sclera Analysis",
     "sclera_finding": "Scleral redness detected — may indicate conjunctivitis or uveitis",
     "redness_level": "Redness Level",
-    "disclaimer": "This is a screening tool only. It is NOT a medical diagnosis. Please consult a qualified ophthalmologist for professional evaluation.",
-    "download_report": "Download PDF Report",
-    "new_scan": "New Scan"
+    "recommendations": "Lifestyle Recommendations"
   },
   "history": {
     "title": "Scan History",
-    "no_scans": "No scans yet. Start your first scan.",
-    "no_scans_action": "Start Scan",
+    "no_scans": "No scans yet. Start your first screening.",
+    "no_scans_action": "Start Screening",
     "date": "Date",
     "condition": "Condition",
     "severity": "Severity",
     "confidence": "Confidence",
+    "health_score": "Health Score",
     "download": "Download Report",
     "delete": "Delete",
     "delete_confirm": "Are you sure you want to delete this scan?",
     "clear_all": "Clear All History",
     "clear_confirm": "Are you sure you want to clear all scan history? This cannot be undone.",
     "compare": "Compare",
-    "compare_title": "Comparison: Scan {{id1}} vs {{id2}}",
-    "select_compare": "Select two scans to compare"
+    "select_compare": "Select two scans to compare",
+    "score_trend": "Score Trend",
+    "score_trend_desc": "Track your eye health score over time"
   },
   "settings": {
     "title": "Settings",
@@ -177,32 +190,16 @@
     "clear_data_desc": "Remove all scan history and preferences",
     "clear_data_confirm": "Are you sure? This will delete all your scan history and reset preferences.",
     "clear_data_success": "All data cleared successfully.",
-    "about": "About IrisScan",
+    "about": "About EyeSight AI",
     "version": "Version",
     "model_info": "Model Information",
-    "model_arch": "Architecture: EfficientNet-B4",
-    "model_dataset": "Training Dataset: UBIRIS.v2 / CASIA-IrisV4 / Synthetic",
-    "model_accuracy": "Benchmark Accuracy: 97.2%",
+    "model_arch": "Architecture: EfficientNet-B4 (Multi-condition)",
+    "model_dataset": "Training Dataset: Synthetic / UBIRIS.v2 / CASIA-IrisV4",
+    "model_accuracy": "Screening Accuracy: 97%",
     "privacy": "Data Privacy: All analysis is performed locally. No images or data are uploaded to any server.",
-    "export_data": "Export Data as JSON"
-  },
-  "report": {
-    "title": "IrisScan Analysis Report",
-    "scan_id": "Scan ID: {{id}}",
-    "patient": "Patient Reference: {{name}}",
-    "date": "Date: {{date}}",
-    "cover_subtitle": "AI-Powered Iris Disease Screening Report",
-    "page_iris": "Iris Analysis",
-    "page_predictions": "Prediction Results",
-    "page_disease": "Disease Information",
-    "page_disclaimer": "Disclaimer & Recommendations",
-    "footer": "IrisScan - AI-Powered Iris Disease Detection",
-    "page_number": "Page {{num}}",
-    "next_steps": "Next Steps",
-    "next_steps_desc1": "Schedule an appointment with an ophthalmologist",
-    "next_steps_desc2": "Bring this report to your consultation",
-    "next_steps_desc3": "Monitor your symptoms and note any changes",
-    "find_doctor": "Find an Eye Doctor Near You"
+    "export_data": "Export Data as JSON",
+    "offline_mode": "Offline Mode",
+    "offline_mode_desc": "Cache conditions data for offline use"
   },
   "errors": {
     "server_unreachable": "Analysis server not reachable. Please ensure the backend is running.",

@@ -5,6 +5,42 @@ import { motion } from 'framer-motion';
 import { useScanStore } from '@/store/useScanStore';
 import Button from '@/components/UI/Button';
 
+/** Eye alignment guide SVG overlay with animated target rings */
+function EyeAlignmentGuide({ guidance, lightingOk, eyeDetected }: {
+  guidance: 'center' | 'hold' | 'good';
+  lightingOk: boolean | null;
+  eyeDetected: boolean;
+}) {
+  const pulseColor = guidance === 'good' ? '#10B981' : guidance === 'hold' ? '#F59E0B' : '#1A6FD4';
+  return (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div className="relative w-72 h-72 sm:w-80 sm:h-80">
+        <svg viewBox="0 0 300 300" className="w-full h-full" aria-hidden="true">
+          {/* Outer guide ring */}
+          <circle cx="150" cy="150" r="140" fill="none" stroke="white" strokeWidth="1" opacity="0.2" />
+          {/* Detection ring */}
+          <circle cx="150" cy="150" r="130" fill="none" stroke="white" strokeWidth="2" opacity="0.5" />
+          {/* Animated dashes ring */}
+          <circle cx="150" cy="150" r="120" fill="none" stroke={pulseColor} strokeWidth="2" opacity={0.6} strokeDasharray="10 6">
+            <animateTransform attributeName="transform" type="rotate" from="0 150 150" to="360 150 150" dur="4s" repeatCount="indefinite" />
+          </circle>
+          {/* Inner guide rings */}
+          <circle cx="150" cy="150" r="60" fill="none" stroke="white" strokeWidth="0.8" opacity="0.3" strokeDasharray="4 4" />
+          <circle cx="150" cy="150" r="30" fill="none" stroke="white" strokeWidth="0.5" opacity="0.2" />
+          {/* Crosshair */}
+          <line x1="140" y1="150" x2="160" y2="150" stroke={pulseColor} strokeWidth="1" opacity="0.5" />
+          <line x1="150" y1="140" x2="150" y2="160" stroke={pulseColor} strokeWidth="1" opacity="0.5" />
+          {/* Alignment status dot */}
+          <circle cx="150" cy="150" r="4" fill={pulseColor} opacity="0.8">
+            <animate attributeName="r" values="3;6;3" dur="1.5s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.6;1;0.6" dur="1.5s" repeatCount="indefinite" />
+          </circle>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 export default function Capture() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -22,6 +58,7 @@ export default function Capture() {
   const [guidance, setGuidance] = useState<'center' | 'hold' | 'good'>('center');
   const [lightingOk, setLightingOk] = useState<boolean | null>(null);
   const [eyeDetected, setEyeDetected] = useState(false);
+  const [showDistanceHint, setShowDistanceHint] = useState(false);
 
   const startCamera = useCallback(async () => {
     setLoading(true);
@@ -112,6 +149,8 @@ export default function Capture() {
       }
       const brightness = sum / (pixels.length / 4 * 3);
       setLightingOk(brightness > 50);
+      // Show distance hint if brightness is very low
+      setShowDistanceHint(brightness < 30);
     }, 1500);
     return () => clearInterval(interval);
   }, [captured]);
@@ -157,7 +196,7 @@ export default function Capture() {
   if (cameraError === 'camera_permission_denied' && !captured) {
     return (
       <div className="max-w-lg mx-auto px-4 py-12 text-center">
-        <div className="card-raised p-8">
+        <div className="glass-card p-8 rounded-xl">
           <svg className="w-16 h-16 mx-auto mb-4 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" />
           </svg>
@@ -200,45 +239,64 @@ export default function Capture() {
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="relative w-64 h-64 sm:w-72 sm:h-72">
-            <svg viewBox="0 0 300 300" className="w-full h-full" aria-hidden="true">
-              <circle cx="150" cy="150" r="130" fill="none" stroke="white" strokeWidth="2" opacity="0.5" />
-              <circle cx="150" cy="150" r="120" fill="none" stroke="white" strokeWidth="1" opacity="0.3" strokeDasharray="8 4">
-                <animate attributeName="stroke-dashoffset" from="0" to="100" dur="3s" repeatCount="indefinite" />
-              </circle>
-              <circle cx="150" cy="150" r="40" fill="none" stroke="white" strokeWidth="0.5" opacity="0.2" />
-            </svg>
-          </div>
-        </div>
+        {/* Animated eye alignment guide */}
+        <EyeAlignmentGuide guidance={guidance} lightingOk={lightingOk} eyeDetected={eyeDetected} />
 
+        {/* Guidance text at top */}
         <div className="absolute top-4 left-0 right-0 text-center pointer-events-none">
-          <p className="text-sm text-white bg-black/50 inline-block px-4 py-1.5 rounded-pill backdrop-blur-sm">
+          <motion.p
+            key={guidance}
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-sm text-white bg-black/40 inline-block px-4 py-1.5 rounded-pill backdrop-blur-sm"
+          >
             {guidance === 'center' && t('capture.guidance_center')}
             {guidance === 'hold' && t('capture.guidance_hold')}
             {guidance === 'good' && t('capture.guidance_good')}
-          </p>
+          </motion.p>
         </div>
 
+        {/* Quality indicators */}
         <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none">
-          <span className={`text-xs px-2.5 py-1 rounded-pill text-white ${
-            lightingOk === null ? 'bg-neutral-500/70' :
-            lightingOk ? 'bg-secondary/80' : 'bg-warning/80'
-          }`}>
+          <motion.span
+            animate={{ opacity: lightingOk === null ? 0.6 : 1 }}
+            className={`text-xs px-2.5 py-1 rounded-pill text-white backdrop-blur-sm ${
+              lightingOk === null ? 'bg-neutral-500/50' :
+              lightingOk ? 'bg-secondary/70' : 'bg-warning/70'
+            }`}
+          >
             {lightingOk === null ? '...' : lightingOk ? '✓' : '⚠'} {t('capture.quality_lighting')}
-          </span>
-          <span className={`text-xs px-2.5 py-1 rounded-pill text-white ${
-            eyeDetected ? 'bg-secondary/80' : 'bg-neutral-500/70'
-          }`}>
+          </motion.span>
+          <motion.span
+            animate={{ opacity: eyeDetected ? 1 : 0.6 }}
+            className={`text-xs px-2.5 py-1 rounded-pill text-white backdrop-blur-sm ${
+              eyeDetected ? 'bg-secondary/70' : 'bg-neutral-500/50'
+            }`}
+          >
             {eyeDetected ? '✓' : '...'} {t('capture.quality_eye')}
-          </span>
+          </motion.span>
         </div>
 
+        {/* Distance hint */}
+        {showDistanceHint && (
+          <div className="absolute top-16 left-0 right-0 text-center pointer-events-none">
+            <p className="text-xs text-warning bg-black/40 inline-block px-3 py-1 rounded-pill backdrop-blur-sm">
+              Move closer or improve lighting
+            </p>
+          </div>
+        )}
+
+        {/* Capture button / countdown */}
         <div className="absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none">
           {countdown !== null ? (
-            <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+            <motion.div
+              key={countdown}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center"
+            >
               <span className="text-2xl font-medium text-white">{countdown}</span>
-            </div>
+            </motion.div>
           ) : (
             <button
               onClick={handleCapture}
@@ -256,7 +314,11 @@ export default function Capture() {
   // Captured image review
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
-      <div className="card-raised p-6 text-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="glass-card p-6 rounded-xl text-center"
+      >
         <div className="relative mb-6">
           <img src={captured} alt="Captured iris" className="w-full max-w-xs mx-auto rounded-card" />
           <svg viewBox="0 0 300 300" className="absolute inset-0 w-full max-w-xs mx-auto pointer-events-none" aria-hidden="true">
@@ -270,7 +332,7 @@ export default function Capture() {
           <Button variant="outline" onClick={handleRetake}>{t('capture.retake')}</Button>
           <Button onClick={handleContinue}>{t('capture.continue')}</Button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

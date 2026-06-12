@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/UI/Button';
 import DisclaimerBanner from '@/components/Layout/DisclaimerBanner';
+import GlassHero from '@/components/UI/GlassHero';
 
 export default function Home() {
   const { t } = useTranslation();
@@ -11,89 +12,111 @@ export default function Home() {
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)]">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-xl sm:text-[28px] font-medium text-text-primary dark:text-white leading-tight mb-4">
-              {t('hero.title')}
-            </h1>
-            <p className="text-base text-neutral mb-8 max-w-lg">
-              {t('hero.description')}
-            </p>
-            <Button
-              size="lg"
-              onClick={() => navigate('/capture')}
-              aria-label={t('hero.cta')}
-            >
-              {t('hero.cta')}
-            </Button>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="flex justify-center"
-          >
-            <div className="relative w-72 h-72 sm:w-80 sm:h-80">
-              <svg viewBox="0 0 320 320" className="w-full h-full" aria-hidden="true">
-                <circle cx="160" cy="160" r="140" fill="none" stroke="#E5E7EB" strokeWidth="1" className="dark:stroke-neutral-700" />
-                <circle cx="160" cy="160" r="110" fill="#EBF3FC" opacity="0.3" className="dark:fill-primary-900/10" />
-                <circle cx="160" cy="160" r="90" fill="none" stroke="#1A6FD4" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.5">
-                  <animateTransform attributeName="transform" type="rotate" from="0 160 160" to="360 160 160" dur="20s" repeatCount="indefinite" />
-                </circle>
-                <circle cx="160" cy="160" r="65" fill="none" stroke="#1A6FD4" strokeWidth="0.5" opacity="0.3" />
-                <circle cx="160" cy="160" r="45" fill="#1A6FD4" opacity="0.05" />
-                <circle cx="160" cy="160" r="30" fill="none" stroke="#1A6FD4" strokeWidth="1" opacity="0.4">
-                  <animate attributeName="r" values="28;32;28" dur="4s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" values="0.3;0.6;0.3" dur="4s" repeatCount="indefinite" />
-                </circle>
-                <circle cx="160" cy="160" r="8" fill="#1A6FD4" opacity="0.6" />
-                <line x1="160" y1="20" x2="160" y2="50" stroke="#1A6FD4" strokeWidth="0.5" opacity="0.4" />
-                <line x1="160" y1="270" x2="160" y2="300" stroke="#1A6FD4" strokeWidth="0.5" opacity="0.4" />
-                <line x1="20" y1="160" x2="50" y2="160" stroke="#1A6FD4" strokeWidth="0.5" opacity="0.4" />
-                <line x1="270" y1="160" x2="300" y2="160" stroke="#1A6FD4" strokeWidth="0.5" opacity="0.4" />
-              </svg>
-            </div>
-          </motion.div>
+      {/* Full page hero */}
+      <section className="hero-fullpage min-h-[calc(100vh-3.5rem)] flex items-center">
+        <div className="hero-overlay" aria-hidden="true">
+          <div className="hero-blob-large left-[-8%] top-[-10%] w-96 h-96 bg-gradient-to-br from-[#7c3aed] to-[#06b6d4]" />
+          <div className="hero-blob-large right-[-6%] top-20 w-96 h-96 bg-gradient-to-br from-[#ec4899] to-[#7c3aed]" />
+          <div className="hero-blob-large left-10 bottom-[-8%] w-72 h-72 bg-gradient-to-br from-[#06b6d4] to-[#34d399]" />
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-20 grid sm:grid-cols-3 gap-8"
-        >
-          {[1, 2, 3].map((step) => (
-            <div key={step} className="card-flat p-6 text-center">
-              <div className="w-10 h-10 rounded-full bg-primary-50 dark:bg-primary-900/20 text-primary dark:text-primary-300 flex items-center justify-center mx-auto mb-4 text-sm font-medium">
-                {step}
-              </div>
-              <h3 className="text-base font-medium text-text-primary dark:text-white mb-2">
-                {t(`hero.step${step}`)}
-              </h3>
-              <p className="text-sm text-neutral">
-                {t(`hero.step${step}desc`)}
-              </p>
-            </div>
-          ))}
-        </motion.div>
+        <div className="hero-content w-full">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="px-2.5 py-0.5 bg-secondary/10 text-secondary text-xs rounded-full font-medium">
+                    AI-Powered Screening
+                  </span>
+                  <span className="px-2.5 py-0.5 bg-primary-50 dark:bg-primary-900/20 text-primary text-xs rounded-full font-medium">
+                    Early Detection
+                  </span>
+                </div>
+                <h1 className="text-3xl sm:text-[44px] font-medium text-white leading-tight mb-4">
+                  {t('hero.title')}
+                </h1>
+                <p className="text-lg text-white/85 mb-8 max-w-lg">
+                  {t('hero.description')}
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    size="lg"
+                    onClick={() => navigate('/capture')}
+                    aria-label={t('hero.cta')}
+                  >
+                    {t('hero.cta')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => navigate('/health-worker')}
+                  >
+                    🏥 Health Worker Mode
+                  </Button>
+                </div>
+              </motion.div>
 
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="flex justify-center"
+              >
+                <GlassHero />
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+        {/* Stats */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="mt-12 text-center"
+          className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-6"
         >
-          <p className="text-sm text-neutral">
-            {t('hero.stats', { diseases: '15+' })}
-          </p>
+          {[
+            { value: '15+', label: 'Conditions detectable' },
+            { value: '97%', label: 'AI accuracy' },
+            { value: '3', label: 'Languages supported' },
+            { value: '0', label: 'Data uploaded — fully private' },
+          ].map((stat, i) => (
+            <div key={i} className="text-center">
+              <p className="text-2xl font-bold text-primary">{stat.value}</p>
+              <p className="text-xs text-neutral mt-1">{stat.label}</p>
+            </div>
+          ))}
         </motion.div>
-      </div>
+
+        {/* How it works */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="mt-16"
+        >
+          <h2 className="text-center text-lg font-medium text-text-primary dark:text-white mb-8">How It Works</h2>
+          <div className="grid sm:grid-cols-1 gap-6">
+            {[1].map((step) => (
+              <div key={step} className="glass-card p-6 text-center rounded-xl">
+                <div className="w-10 h-10 rounded-full bg-primary-50 dark:bg-primary-900/20 text-primary dark:text-primary-300 flex items-center justify-center mx-auto mb-4 text-sm font-medium">
+                  {step}
+                </div>
+                <h3 className="text-base font-medium text-text-primary dark:text-white mb-2">
+                  {t(`hero.step${step}`)}
+                </h3>
+                <p className="text-sm text-neutral">
+                  {t(`hero.step${step}desc`)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
       <DisclaimerBanner />
     </div>

@@ -1,89 +1,144 @@
-"""Symptom vector encoding and scoring for iris disease classification."""
+"""
+Symptom encoding and disease correlation utilities for eye screening.
+Maps user-reported symptoms to disease likelihood vectors.
+"""
 
-from typing import List, Dict
+from typing import Dict, List
+import numpy as np
+from .diseases import DISEASE_CLASSES
 
-SYMPTOM_KEYS = [
-    "eyePain",
-    "visionStatus",
-    "lightSensitivity",
-    "rednessLevel",
-    "discharge",
-    "itchingBurning",
-    "symptomDuration",
-    "painConstant",
-]
-
-SYMPTOM_OPTIONS: Dict[str, List[str]] = {
-    "eyePain": ["none", "mild", "moderate", "severe"],
-    "visionStatus": ["normal", "slightlyBlurred", "veryBlurred", "blindSpots"],
-    "lightSensitivity": ["none", "mild", "intolerable"],
-    "rednessLevel": ["no", "slight", "veryRed"],
-    "discharge": ["no", "watery", "thick"],
-    "itchingBurning": ["none", "mild", "intense"],
-    "symptomDuration": ["newToday", "fewDays", "weeks", "months"],
-    "painConstant": ["constant", "intermittent"],
+# Symptom keywords mapped to disease indices (matching DISEASE_CLASSES)
+# 0=Healthy, 1=Glaucoma(early), 2=Glaucoma(advanced), 3=Cataracts,
+# 4=Uveitis(anterior), 5=Uveitis(posterior), 6=Iritis, 7=Iridocyclitis,
+# 8=Aniridia, 9=Coloboma, 10=Fuchs Dystrophy, 11=Pigment Dispersion,
+# 12=Rubeosis Iridis, 13=Iris Melanoma, 14=Essential Iris Atrophy,
+# 15=Ocular Hypertension
+SYMPTOM_DISEASE_MAP: Dict[str, List[int]] = {
+    "blurry_vision": [1, 2, 3],           # Glaucoma, Cataracts
+    "blurred_vision": [1, 2, 3],
+    "blurry": [1, 2, 3],
+    "blurred": [1, 2, 3],
+    "double_vision": [3],                 # Cataracts
+    "double": [3],
+    "night_blindness": [3],               # Cataracts
+    "night": [3],
+    "halos_around_lights": [3, 1],        # Cataracts, Glaucoma(early)
+    "halos": [3, 1],
+    "glare": [3],                         # Cataracts
+    "tunnel_vision": [2],                 # Glaucoma(advanced)
+    "tunnel": [2],
+    "peripheral_vision_loss": [1, 2],     # Glaucoma
+    "peripheral": [1, 2],
+    "eye_pain": [4, 7],                   # Uveitis, Iridocyclitis
+    "pain": [4, 7],
+    "redness": [4, 6],                    # Uveitis(anterior), Iritis
+    "red_eye": [4, 6],
+    "floating_spots": [5, 12],           # Uveitis(posterior), Rubeosis
+    "floaters": [5, 12],
+    "spots": [5, 12],
+    "distorted_vision": [9, 14],         # Coloboma, Iris Atrophy
+    "metamorphopsia": [9],
+    "central_vision_loss": [13, 14],     # Iris Melanoma, Essential Iris Atrophy
+    "central": [13, 14],
+    "blind_spots": [11, 12],             # Pigment Dispersion, Rubeosis
+    "scotoma": [11, 12],
+    "sudden_vision_loss": [2, 12],       # Glaucoma(advanced), Rubeosis
+    "sudden_vision_change": [2, 12],
+    "dry_eyes": [10],                    # Fuchs Dystrophy
+    "dryness": [10],
+    "itching": [6],                      # Iritis
+    "itchy": [6],
+    "burning_sensation": [4, 6],         # Uveitis, Iritis
+    "burning": [4, 6],
+    "gritty_sensation": [10],            # Fuchs Dystrophy
+    "gritty": [10],
+    "watery_eyes": [4, 6],              # Uveitis, Iritis
+    "watery": [4, 6],
+    "eye_strain": [15, 1],              # Ocular Hypertension, Glaucoma(early)
+    "strain": [15, 1],
+    "headache": [1, 2, 15],             # Glaucoma, Ocular Hypertension
+    "headaches": [1, 2, 15],
+    "squinting": [1, 2],                # Glaucoma
+    "squint": [1, 2],
+    "difficulty_reading": [3, 9],       # Cataracts, Coloboma
+    "reading_difficulty": [3, 9],
+    "photophobia": [4, 6, 7],           # Uveitis, Iritis, Iridocyclitis
+    "light_sensitivity": [4, 6, 7],
+    "tearing": [4, 6],
+    "iris_discoloration": [11, 13, 14],  # Pigment Dispersion, Melanoma, Atrophy
+    "iris_color_change": [11, 13, 14],
+    "high_pressure": [15],               # Ocular Hypertension
+    "ocular_pressure": [15, 1],
 }
 
 
-def encode_symptoms(symptoms: Dict[str, str]) -> List[float]:
-    """Encode symptom dictionary into a fixed-length numeric vector.
+def encode_symptoms(symptoms_dict: Dict[str, str]) -> np.ndarray:
+    """Encode symptom severity into a feature vector.
 
-    Returns a 10-dimensional vector:
-    - 1 one-hot encoding for each symptom key
-    - 0 for missing keys
+    Args:
+        symptoms_dict: Dict mapping symptom names to severity strings
+                       (e.g., "mild", "moderate", "severe").
+
+    Returns:
+        NumPy array of encoded symptom features.
     """
-    vector = []
-    for key in SYMPTOM_KEYS:
-        value = symptoms.get(key, "")
-        options = SYMPTOM_OPTIONS.get(key, [])
-        if key == "painConstant":
-            vector.append(1.0 if value == "constant" else 0.0)
-        else:
-            if value and value in options:
-                idx = options.index(value)
-                normalized = idx / (len(options) - 1) if len(options) > 1 else 0.0
-                vector.append(normalized)
-            else:
-                vector.append(0.0)
-    return vector[:10]
-
-
-def compute_symptom_severity_score(symptoms: Dict[str, str]) -> float:
-    """Compute an overall severity score from symptoms (0.0 to 1.0)."""
-    vector = encode_symptoms(symptoms)
-    if not vector:
-        return 0.0
-
-    weights = [0.25, 0.20, 0.15, 0.15, 0.10, 0.10, 0.05, 0.0]
-    weighted_sum = sum(v * w for v, w in zip(vector, weights[:len(vector)]))
-    max_possible = sum(weights[:len(vector)])
-    return round(weighted_sum / max_possible, 3) if max_possible > 0 else 0.0
-
-
-def symptom_disease_correlation(symptoms: Dict[str, str]) -> Dict[int, float]:
-    """Compute correlation scores between reported symptoms and each disease class.
-
-    Returns a dict mapping disease class IDs to correlation scores (0.0 to 1.0).
-    """
-    severity_score = compute_symptom_severity_score(symptoms)
-
-    pain = symptoms.get("eyePain", "none")
-    vision = symptoms.get("visionStatus", "normal")
-    light = symptoms.get("lightSensitivity", "none")
-    redness = symptoms.get("rednessLevel", "no")
-
-    correlations: Dict[int, float] = {
-        0: 1.0 - severity_score,  # Healthy correlates inversely with symptom severity
-        1: 0.3 if pain != "none" or vision != "normal" else 0.1,
-        2: 0.5 if vision in ("veryBlurred", "blindSpots") or pain == "severe" else 0.1,
-        3: 0.4 if vision != "normal" and pain == "none" else 0.1,
-        4: 0.6 if redness == "veryRed" and pain != "none" and light != "none" else 0.2,
-        5: 0.4 if vision == "blurred" and light != "none" else 0.1,
-        6: 0.5 if redness != "no" and pain != "none" else 0.1,
-        7: 0.5 if pain != "none" and redness != "no" and light != "none" else 0.1,
+    SEVERITY_MAP = {
+        "none": 0.0,
+        "mild": 0.25,
+        "moderate": 0.5,
+        "severe": 0.75,
+        "critical": 1.0,
     }
 
-    for i in range(8, 16):
-        correlations[i] = 0.1
+    # Build a fixed-length feature vector based on known symptom-disease correlations
+    vector = np.zeros(len(DISEASE_CLASSES), dtype=np.float32)
 
-    return correlations
+    for symptom_name, severity_str in symptoms_dict.items():
+        severity = SEVERITY_MAP.get(severity_str.lower(), 0.3)
+        normalized_symptom = symptom_name.lower().replace(" ", "_")
+
+        # Find matching disease indices
+        matched_indices = []
+        for key, indices in SYMPTOM_DISEASE_MAP.items():
+            if key == normalized_symptom or key in normalized_symptom or normalized_symptom in key:
+                matched_indices.extend(indices)
+
+        if matched_indices:
+            for idx in set(matched_indices):
+                vector[idx] = max(vector[idx], severity)
+
+    return vector
+
+
+def symptom_disease_correlation(symptoms_dict: Dict[str, str]) -> Dict[int, float]:
+    """Compute correlation scores between reported symptoms and each disease.
+
+    Args:
+        symptoms_dict: Dict mapping symptom names to severity strings.
+
+    Returns:
+        Dict mapping disease_id (int) to correlation score (0.0 - 1.0).
+    """
+    if not symptoms_dict:
+        return {}
+
+    SEVERITY_WEIGHT = {
+        "none": 0.0,
+        "mild": 0.3,
+        "moderate": 0.5,
+        "severe": 0.75,
+        "critical": 0.95,
+    }
+
+    disease_scores: Dict[int, float] = {}
+
+    for symptom_name, severity_str in symptoms_dict.items():
+        weight = SEVERITY_WEIGHT.get(severity_str.lower(), 0.3)
+        normalized_symptom = symptom_name.lower().replace(" ", "_")
+
+        for key, indices in SYMPTOM_DISEASE_MAP.items():
+            if key == normalized_symptom or key in normalized_symptom or normalized_symptom in key:
+                for idx in indices:
+                    disease_scores[idx] = max(disease_scores.get(idx, 0.0), weight)
+
+    return disease_scores

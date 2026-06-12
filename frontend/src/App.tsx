@@ -1,8 +1,11 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '@/components/Layout/Navbar';
+import DoorOverlay from '@/components/UI/DoorOverlay';
 import { getDarkMode, getLanguage } from '@/utils/storage';
+import EyeReveal from '@/components/UI/EyeReveal';
+import ProtectedRoute from '@/components/Layout/ProtectedRoute';
 
 const Home = lazy(() => import('@/pages/Home'));
 const Capture = lazy(() => import('@/pages/Capture'));
@@ -11,6 +14,13 @@ const Analysing = lazy(() => import('@/pages/Analysing'));
 const Results = lazy(() => import('@/pages/Results'));
 const History = lazy(() => import('@/pages/History'));
 const Settings = lazy(() => import('@/pages/Settings'));
+const HealthWorkerMode = lazy(() => import('@/pages/HealthWorkerMode'));
+const Login = lazy(() => import('@/pages/Login'));
+const CreateAccount = lazy(() => import('@/pages/CreateAccount'));
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const DeleteAccount = lazy(() => import('@/pages/DeleteAccount'));
+const Door = lazy(() => import('@/pages/Door'));
+const Profile = lazy(() => import('./pages/Profile'));
 
 function Loading() {
   return (
@@ -26,36 +36,58 @@ function Loading() {
   );
 }
 
+function RootLayout() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-[#0F1117] dark:to-[#1a1d2e] transition-colors app-root">
+      <Navbar />
+      <DoorOverlay />
+      <EyeReveal />
+      <main>
+        <Suspense fallback={<Loading />}>
+          <Outlet />
+        </Suspense>
+      </main>
+    </div>
+  );
+}
+
 export default function App() {
   const { i18n } = useTranslation();
 
   useEffect(() => {
     const dark = getDarkMode();
-    if (dark) {
-      document.documentElement.classList.add('dark');
-    }
+    if (dark) document.documentElement.classList.add('dark');
     const lang = getLanguage();
     i18n.changeLanguage(lang);
   }, [i18n]);
 
-  return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-white dark:bg-[#0F1117] transition-colors">
-        <Navbar />
-        <main>
-          <Suspense fallback={<Loading />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/capture" element={<Capture />} />
-              <Route path="/questionnaire" element={<Questionnaire />} />
-              <Route path="/analysing" element={<Analysing />} />
-              <Route path="/results" element={<Results />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </Suspense>
-        </main>
-      </div>
-    </BrowserRouter>
+  const router = createBrowserRouter(
+      [
+      {
+        path: '/',
+        element: <RootLayout />,
+        children: [
+          { index: true, element: <Home /> },
+          { path: 'dashboard', element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
+          { path: 'capture', element: <ProtectedRoute><Capture /></ProtectedRoute> },
+          { path: 'questionnaire', element: <ProtectedRoute><Questionnaire /></ProtectedRoute> },
+          { path: 'analysing', element: <ProtectedRoute><Analysing /></ProtectedRoute> },
+          { path: 'results', element: <ProtectedRoute><Results /></ProtectedRoute> },
+          { path: 'history', element: <ProtectedRoute><History /></ProtectedRoute> },
+          { path: 'settings', element: <ProtectedRoute><Settings /></ProtectedRoute> },
+          { path: 'health-worker', element: <ProtectedRoute><HealthWorkerMode /></ProtectedRoute> },
+          { path: 'profile', element: <ProtectedRoute><Profile /></ProtectedRoute> },
+
+          // public routes under root but not protected
+          { path: 'login', element: <Login /> },
+          { path: 'create', element: <CreateAccount /> },
+          { path: 'door', element: <Door /> },
+          { path: 'delete', element: <ProtectedRoute><DeleteAccount /></ProtectedRoute> },
+        ],
+      },
+    ],
+    ({ future: { v7_startTransition: true, v7_relativeSplatPath: true } } as any)
   );
+
+  return <RouterProvider router={router} />;
 }
