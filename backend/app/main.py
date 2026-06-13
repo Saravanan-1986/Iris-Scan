@@ -55,6 +55,9 @@ class Condition(BaseModel):
     description: str
     meaning: str
     what_to_do: str
+    explanation: Optional[str] = None
+    affected_regions: Optional[List[str]] = None
+    symptom_evidence: Optional[List[str]] = None
 
 
 class AnalyseResponse(BaseModel):

@@ -40,6 +40,12 @@ export interface Condition {
   description: string;
   meaning: string;
   what_to_do: string;
+  /** Why the AI predicted this - evidence/reasoning */
+  explanation?: string;
+  /** Which iris regions/sectors contributed to this prediction */
+  affected_regions?: string[];
+  /** Symptom-based reasoning */
+  symptom_evidence?: string[];
 }
 
 export interface AnalysisResult {

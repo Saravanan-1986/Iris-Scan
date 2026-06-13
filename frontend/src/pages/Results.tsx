@@ -40,9 +40,13 @@ export default function Results() {
   const [showHospitals, setShowHospitals] = useState(false);
   const [saved, setSaved] = useState(false);
   const [expandedConditionId, setExpandedConditionId] = useState<string | null>(null);
+  const [showAIReasoning, setShowAIReasoning] = useState(true);
 
-  const handleSave = () => {
-    if (saved || !img) return;
+  // Auto-save scan to history when results are first displayed
+  const autoSavedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (autoSavedRef.current || !img || conditions.length === 0) return;
+    autoSavedRef.current = true;
     const record: ScanRecord = {
       id: 'scan_' + Date.now(),
       date: new Date().toISOString(),
@@ -59,6 +63,28 @@ export default function Results() {
     };
     const ok = addRecord(record);
     if (ok) setSaved(true);
+  }, [img, conditions, heatmapImage, sectorAnalysis, symptoms, predictions, eyeHealthScore, qualityScore, addRecord]);
+
+  const handleSave = () => {
+    if (!autoSavedRef.current) {
+      if (saved || !img) return;
+      const record: ScanRecord = {
+        id: 'scan_' + Date.now(),
+        date: new Date().toISOString(),
+        irisImageBase64: img,
+        heatmapBase64: heatmapImage || '',
+        sectorAnalysis,
+        symptoms: symptoms as any,
+        predictions,
+        topPrediction: conditions[0]?.name || predictions[0]?.disease || 'Unknown',
+        language: 'en',
+        conditions,
+        eyeHealthScore,
+        qualityScore,
+      };
+      const ok = addRecord(record);
+      if (ok) setSaved(true);
+    }
   };
 
   const handleNewScan = () => {
@@ -206,6 +232,61 @@ export default function Results() {
           ))}
         </div>
       </div>
+
+      {/* AI Reasoning Summary Section - NEW */}
+      {conditions.length > 0 && conditions.some(c => c.explanation) && (
+        <Card className="!p-0 overflow-hidden">
+          <button
+            onClick={() => setShowAIReasoning(!showAIReasoning)}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <span className="text-sm font-medium text-text-primary dark:text-white">How the AI analyzed your scan</span>
+            </div>
+            <svg
+              className={`w-5 h-5 text-neutral transition-transform ${showAIReasoning ? 'rotate-180' : ''}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {showAIReasoning && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              className="border-t border-subtle"
+            >
+              <div className="p-4 space-y-4">
+                {conditions.map((condition, i) => condition.explanation && (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/30">
+                    <div className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-primary">{i + 1}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-text-primary dark:text-white mb-1">{condition.name}</p>
+                      <p className="text-xs text-neutral leading-relaxed">{condition.explanation}</p>
+                      {condition.affected_regions && condition.affected_regions.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {condition.affected_regions.map((r) => (
+                            <span key={r} className="px-1.5 py-0.5 text-[10px] font-mono rounded bg-primary-50 dark:bg-primary-900/20 text-primary">
+                              {r}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </Card>
+      )}
 
       {/* Recommendations Section */}
       <Card>
